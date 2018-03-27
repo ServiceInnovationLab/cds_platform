@@ -1,0 +1,124 @@
+---
+# configure apache vhost for openam web
+- hosts: am-web
+  become: yes
+  vars:
+    host_ip: "{{ hostvars[inventory_hostname].ansible_host }}"
+  pre_tasks:
+    - name: Create sso cert directory
+      file:
+        path: /etc/httpd/ssl/sso
+        state: directory
+
+    # vagrant-specific set up
+    - name: Install sso ssl certs
+      copy:
+        src: "staging/vagrant/files/ssl/sso/{{ item }}"
+        dest: "/etc/httpd/ssl/sso/{{ item }}"
+        mode: u=rw,g=,o=
+      with_items:
+        - webserver-chain.crt
+        - webserver.crt
+        - webserver.key
+      when: not use_letsencrypt
+
+    # should set up letsencrypt and renewals here
+    - name: Symlink letsencrypt certs for sso
+      file:
+        src: /etc/letsencrypt/live/sso.{{ env }}.delegation.org.nz/{{ item.src }}
+        dest: "/etc/httpd/ssl/sso/{{ item.dest }}"
+        state: link
+      with_items:
+        - src: chain.pem
+          dest: webserver-chain.crt
+        - src: cert.pem
+          dest: webserver.crt
+        - src: privkey.pem
+          dest: webserver.key
+      when: use_letsencrypt
+
+  roles:
+    - role: geerlingguy.apache
+      apache_ports_configuration_items: [] #disable global listening port
+      apache_restart_state: stopped
+      apache_state: stopped
+      apache_vhosts_filename: am-vhost.conf
+      apache_listen_ip: "{{ host_ip }}"
+      apache_global_vhost_settings: |
+        {{ ansible_managed | comment }}
+        Listen {{ host_ip }}:443
+      apache_vhosts: []
+      apache_vhosts_ssl:
+        - servername: "{{ inventory_hostname }}"
+          serveralias: "{{ inventory_hostname }}"
+          certificate_file: ssl/sso/webserver.crt
+          certificate_key_file: ssl/sso/webserver.key
+          certificate_chain_file: ssl/sso/webserver-chain.crt
+          extra_parameters: |
+              Header append X-UA-Compatible: IE=edge
+
+              ProxyPreserveHost On
+              RequestHeader set X-Forwarded-Proto "https" env=HTTPS
+              RequestHeader set X-Forwarded-Port "443" env=HTTPS
+
+              <Location />
+                  SSLRequireSSL
+              </Location>
+
+              # Vagrant isn't protected by the gatekeeper, needs to have a regex for include optional to work
+              IncludeOptional conf/access.con[f]
+
+              ProxyPass /sso/approve !
+              Redirect /sso/approve https://{{ www_host }}/app/ui/dashboard/dashboard
+
+              ProxyPass /sso http://{{ am_host }}:8080/sso
+              ProxyPassReverse /sso http://{{ am_host }}:8080/sso
+
+              # Rewrite cookies to have a prefix, and remove the prefix on the way back in. We have to be specific here to avoid the SSO/iPlanetDirectoryPro cookie
+              Header edit Set-Cookie "^JSESSIONID=([^;]*).*" "{{ openam_cookie_name }}_JSESSIONID=$1; Domain={{ cookie_domain }}; Path=/; Secure; HttpOnly"
+              RequestHeader edit Cookie {{ openam_cookie_name }}_JSESSIONID=([^;]) "JSESSIONID=$1"
+
+              Header edit Set-Cookie "^amlbcookie=([^;]*).*" "{{ openam_cookie_name }}_amlbcookie=$1; Domain={{ cookie_domain }}; Path=/; Secure; HttpOnly"
+              RequestHeader edit Cookie {{ openam_cookie_name }}_amlbcookie=([^;]) "amlbcookie=$1"
+
+              # Any redirect away from OAuth from oauth should remove the OpenAM cookie (essentially logs them out)
+              <Location /sso/oauth2>
+                  Header set Set-Cookie "{{ openam_cookie_name }}=; Domain={{ cookie_domain }}; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT" "expr=%{resp:Location} =~ m$.$ && %{resp:Location} !~ m$https://(sso|www){{ cookie_domain }}$"
+              </Location>
+
+  post_tasks:
+    - seboolean:
+        name: "{{ item }}"
+        state: yes
+        persistent: yes
+      with_items:
+        - httpd_can_network_connect
+
+    - name: remove httpd default files
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /etc/httpd/conf.d/welcome.conf
+        - /etc/httpd/conf.d/ssl.conf
+        - /etc/httpd/conf.d/autoindex.conf
+        - /etc/httpd/conf.d/userdir.conf
+
+    - name: disable default listen
+      lineinfile:
+        dest: /etc/httpd/conf/httpd.conf
+        regexp: '^(Listen.*)'
+        line: '# \1'
+        backrefs: yes
+
+    - name: Apache restarted
+      service:
+        name: httpd
+        state: restarted
+
+# now run the tomcat and openam installation roles
+- hosts: am
+  become: yes
+  roles:
+    - tomcat
+    - openam

@@ -1,0 +1,129 @@
+---
+- name: Detect existing openam install
+  stat:
+    path: /usr/share/tomcat/.openamcfg/AMConfig_usr_share_tomcat_webapps_sso_
+  register: openam_installed
+
+- name: OpenAM sources
+  get_url:
+    url: # TODO: insert url for downloading openam dependencies. E.g. https://tools.example/sources/{{ item }}
+    dest: SOURCES/{{ item }}
+  delegate_to: localhost
+  become: no
+  with_items:
+    - AM-{{ openam_version }}.war
+    - SSOAdminTools-{{ openam_version }}.zip
+    - SSOConfiguratorTools-{{ openam_version }}.zip
+  when: not openam_installed.stat.exists
+
+- name: Install OpenAM war
+  copy:
+    src: SOURCES/AM-{{ openam_version }}.war
+    dest: /var/lib/tomcat/webapps/sso.war
+    group: tomcat
+    owner: tomcat
+  when: not openam_installed.stat.exists
+
+- name: Create OpenAM config dir
+  file:
+    path: /opt/openam
+    state: directory
+    group: tomcat
+    owner: tomcat
+  when: not openam_installed.stat.exists
+
+- name: Start tomcat
+  service:
+    name: tomcat
+    state: started
+  when: not openam_installed.stat.exists
+
+- name: Tools directories
+  file:
+    path: /opt/openamTools/{{ item }}
+    state: directory
+  with_items: [ ssoconfig, ssoadm ]
+  when: not openam_installed.stat.exists
+
+- name: Tools extracted
+  unarchive:
+    src: SOURCES/{{ item.archive }}
+    dest: /opt/openamTools/{{ item.path }}
+  with_items:
+    - { archive: 'SSOConfiguratorTools-{{ openam_version }}.zip', path: 'ssoconfig' }
+    - { archive: 'SSOAdminTools-{{ openam_version }}.zip', path: 'ssoadm' }
+  when: not openam_installed.stat.exists
+
+- name: Make bin directory
+  file:
+    path: /opt/openam/bin
+    state: directory
+  when: not openam_installed.stat.exists
+
+- name: Install admin tool templates
+  template:
+    src: "{{ item }}.j2"
+    dest: /opt/openam/bin/{{ item }}
+    mode: u=rwx,g=,o=
+  with_items: [ ampassword, amverifyarchive, ssoadm ]
+  when: not openam_installed.stat.exists
+
+- name: OpenAM admin password file
+  copy:
+    content: "{{ openam_admin_pwd }}"
+    dest: /opt/openam/admin_pwd
+    mode: u=r,g=,o=
+  when: not openam_installed.stat.exists
+
+- name: Unwanted ssoadm files
+  file:
+    path: /opt/openamTools/ssoadm/{{ item }}
+    state: absent
+  with_items: [ README.setup, setup, setup.bat, template ]
+  when: not openam_installed.stat.exists
+
+- name: SSO config temp dir
+  tempfile:
+    state: directory
+    suffix: '-openam-config'
+  register: ssoconfig_temp
+  when: not openam_installed.stat.exists
+
+- name: Initial config template
+  template:
+    src: openamconfig.j2
+    dest: "{{ ssoconfig_temp.path }}/openamconfig"
+  when: not openam_installed.stat.exists
+
+- name: Run initial configuration
+  command: >
+    java -jar /opt/openamTools/ssoconfig/openam-configurator-tool-{{ configurator_version }}.jar -f {{ ssoconfig_temp.path }}/openamconfig
+  when: not openam_installed.stat.exists
+
+- name: SSO admin temp dir
+  tempfile:
+    state: directory
+    suffix: '-openam-adm'
+  register: ssoadm_temp
+  when: not openam_installed.stat.exists
+
+- name: ssoadm config templates
+  template:
+    src: "{{ item }}"
+    dest: /{{ ssoadm_temp.path }}/{{ item | basename | regex_replace('\.j2$', '') }}
+  with_fileglob: ../templates/ssoadm/*.j2
+  when: not openam_installed.stat.exists
+
+- name: Run configuration batch
+  command: >
+    /opt/openam/bin/ssoadm do-batch --adminid amadmin
+    --password-file /opt/openam/admin_pwd
+    --batchfile {{ ssoadm_temp.path }}/ssoadm.txt
+    --batchstatus /opt/openam/ssoadm.log
+  when: not openam_installed.stat.exists
+
+- name: Restart openam
+  service:
+    name: tomcat
+    state: restarted
+  when: not openam_installed.stat.exists

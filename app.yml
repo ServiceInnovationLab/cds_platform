@@ -1,0 +1,170 @@
+---
+- hosts: localhost
+  connection: local
+  roles:
+    - { role: download_artifact, job_name: 'Delegations%20-%20CDS', artifact_name: 'cds-swarm.jar' }
+
+- hosts: db-server
+  become: yes
+  vars:
+    - flyway_version: 4.2.0
+  roles:
+    - role: geerlingguy.postgresql
+      postgresql_global_config_options:
+        - option: listen_addresses
+          value: "{{ hostvars[inventory_hostname].ansible_host }}"
+      postgresql_databases:
+        - name: "{{ db_name }}"
+      postgresql_users:
+        - name: "{{ db_user }}"
+          password: "{{ db_password }}"
+          db: "{{ db_name }}"
+          priv: all
+      postgresql_hba_entries:
+      - { type: local, database: all, user: postgres, auth_method: peer }
+      - { type: local, database: "{{ db_name }}", user: "{{ db_user }}", auth_method: password }
+      - { type: host, database: "{{ db_name }}", user: "{{ db_user }}", auth_method: password, address: 0.0.0.0/0 }
+
+    - role: flyway
+
+  post_tasks:
+    # extract migrations from lastSuccessfulBuild
+    - name: Get migrations container
+      copy:
+        src: SOURCES/cds-swarm.jar
+        dest: /tmp/cds-swarm.jar
+
+    - name: Unpack cds war file
+      command: unzip -oj /tmp/cds-swarm.jar _bootstrap/cds.war -d /tmp
+
+    - name: Unpack migrations
+      command: unzip -oj /tmp/cds.war WEB-INF/classes/db/migration/* -d /opt/flyway-{{ flyway_version }}/sql/
+
+    # run migrations
+    - name: Migrate database
+      command: /opt/flyway-{{ flyway_version }}/flyway -placeholderReplacement=false migrate
+
+- hosts: app
+  become: yes
+  roles:
+    - cds
+
+# web server
+- hosts: app-web
+  become: yes
+  vars:
+    host_ip: "{{ hostvars[inventory_hostname].ansible_host }}"
+  pre_tasks:
+    - name: Create www cert directory
+      file:
+        path: /etc/httpd/ssl/www
+        state: directory
+
+    # vagrant-specific set up
+    - name: Install www ssl certs
+      copy:
+        src: "staging/vagrant/files/ssl/www/{{ item }}"
+        dest: "/etc/httpd/ssl/www/{{ item }}"
+        mode: u=rw,g=,o=
+      with_items:
+        - webserver-chain.crt
+        - webserver.crt
+        - webserver.key
+      when: not use_letsencrypt
+
+    # should set up letsencrypt and renewals here
+    - name: Symlink letsencrypt certs for www
+      file:
+        src: /etc/letsencrypt/live/www.{{ env }}.delegation.org.nz/{{ item.src }}
+        dest: "/etc/httpd/ssl/www/{{ item.dest }}"
+        state: link
+      with_items:
+        - src: chain.pem
+          dest: webserver-chain.crt
+        - src: cert.pem
+          dest: webserver.crt
+        - src: privkey.pem
+          dest: webserver.key
+      when: use_letsencrypt
+
+  roles:
+    - role: geerlingguy.apache
+      apache_ports_configuration_items: [] #disable global listening port
+      apache_restart_state: stopped
+      apache_state: stopped
+      apache_vhosts_filename: app-vhost.conf
+      apache_listen_ip: "{{ host_ip }}"
+      apache_global_vhost_settings: |
+        {{ ansible_managed | comment }}
+        Listen {{ host_ip }}:80
+        Listen {{ host_ip }}:443
+      apache_vhosts:
+        - servername: "{{ inventory_hostname }}"
+          serveralias: "{{ inventory_hostname }}"
+          extra_parameters: |
+            RewriteEngine On
+            RewriteCond %{HTTPS} off
+            RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI}
+      apache_vhosts_ssl:
+        - servername: "{{ inventory_hostname }}"
+          serveralias: "{{ inventory_hostname }}"
+          certificate_file: ssl/www/webserver.crt
+          certificate_key_file: ssl/www/webserver.key
+          certificate_chain_file: ssl/www/webserver-chain.crt
+          extra_parameters: |
+            Header append X-UA-Compatible: IE=edge
+
+            ProxyPreserveHost On
+            RequestHeader set X-Forwarded-Proto "https" env=HTTPS
+            RequestHeader set X-Forwarded-Port "443" env=HTTPS
+
+            <Location />
+              SSLRequireSSL
+            </Location>
+
+            # Vagrant isn't protected by the gatekeeper, needs to have a regex for include optional to work
+            IncludeOptional conf/access.con[f]
+
+            ProxyPass /cds http://{{ cds_host }}:8080/cds
+            ProxyPassReverse /cds http://{{ cds_host }}:8080/cds
+
+            Header set Access-Control-Allow-Origin "https://{{ test_host }}"
+
+            # Rewrite specific cookies to have a prefix, and remove the prefix on the way back in. Can't do all cookies because we need to set the openam cookie as well.
+            # Note, the csfcfc cookie is used for flash messaged in JSF.
+            Header edit Set-Cookie "^(APP_ID|csfcfc)=([^;]*).*[pP]ath=([^;]*);" "{{ cookie_prefix }}_$1=$2; Domain={{ cookie_domain }}; Path=$3; Secure; HttpOnly"
+            RequestHeader edit* Cookie {{ cookie_prefix }}_([^=]*)=([^;]) "$1=$2"
+
+            <Location "/ui">
+                ErrorDocument 403 /ui/errors/forbidden
+            </Location>
+
+  post_tasks:
+    - seboolean:
+        name: "{{ item }}"
+        state: yes
+        persistent: yes
+      with_items:
+        - httpd_can_network_connect
+
+    - name: remove httpd default files
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /etc/httpd/conf.d/welcome.conf
+        - /etc/httpd/conf.d/ssl.conf
+        - /etc/httpd/conf.d/autoindex.conf
+        - /etc/httpd/conf.d/userdir.conf
+
+    - name: disable default listen
+      lineinfile:
+        dest: /etc/httpd/conf/httpd.conf
+        regexp: '^(Listen.*)'
+        line: '# \1'
+        backrefs: yes
+
+    - name: WWW apache restarted
+      service:
+        name: httpd
+        state: restarted

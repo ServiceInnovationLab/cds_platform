@@ -1,0 +1,33 @@
+# Apply server configuration
+update-server-cfg -s {{ openam_server_url }}/sso -a com.iplanet.services.debug.level=message
+update-server-cfg -s {{ openam_server_url }}/sso -a com.sun.services.debug.mergeall=on
+update-server-cfg -s {{ openam_server_url }}/sso -a ssoadm.disabled=false
+update-server-cfg -s {{ openam_server_url }}/sso -a com.iplanet.am.session.maxSessions=100000
+update-server-cfg -s {{ openam_server_url }}/sso -a com.iplanet.am.cookie.name={{ openam_cookie_name }}
+update-server-cfg -s {{ openam_server_url }}/sso -a com.iplanet.am.cookie.secure=true
+
+set-attr-defs --servicename "iPlanetAMAuthService" --schematype "organization" --attributevalues "iplanet-am-auth-key-alias=signing"
+set-attr-defs --servicename "iPlanetAMAuthService" --schematype "global" --attributevalues "iplanet-am-auth-ldap-connection-pool-size=10:65"
+set-attr-defs --servicename "iPlanetAMSessionService" --schematype "dynamic" --attributevalues "iplanet-am-session-max-idle-time=600"
+set-attr-defs --servicename "iPlanetAMSessionService" --schematype "dynamic" --attributevalues "iplanet-am-session-max-session-time=600"
+
+# enable hotswap of UI files
+update-server-cfg --servername {{ openam_server_url }}/sso --attributevalues org.forgerock.openam.core.resource.lookup.cache.enabled=false
+
+# create the datastore
+# Not using this for now as federating to this is non-zero effort
+# create-datastore --realm "/delegations" --name "opendj" --datatype "LDAPv3ForOpenDS" --datafile {{ ssoadm_temp.path }}/datastore.properties
+
+create-realm --realm "/delegations"
+
+set-realm-svc-attrs --realm "/delegations" --servicename "iPlanetAMAuthService" --attributevalues "iplanet-am-auth-dynamic-profile-creation=true"
+
+# Add basic OAuth OP config and agent
+add-svc-realm --realm "/delegations" --servicename "OAuth2Provider" --datafile {{ ssoadm_temp.path }}/oauth-provider.txt
+add-svc-realm --realm "/delegations" --servicename "UmaProvider" --datafile {{ ssoadm_temp.path }}/uma-provider.txt
+
+create-agent --realm "/delegations" --agentname {{ cds.oauth2.client_id }} --agenttype OAuth2Client --datafile {{ ssoadm_temp.path }}/oauth-agent-delegation-service.txt
+
+# Enable user self registration
+add-svc-realm --realm "/delegations" --servicename "selfService" --datafile {{ ssoadm_temp.path}}/user-selfservice.txt
+# vim: filetype=sh

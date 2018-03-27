@@ -1,0 +1,11 @@
+---
+- name: Deploy html
+  template:
+    src: index.html.j2
+    dest: /var/www/html/index.html
+
+- name: Deploy static files
+  copy:
+    src: '{{ item }}'
+    dest: /var/www/html/{{ item | basename }}
+  with_fileglob: [ '*' ]

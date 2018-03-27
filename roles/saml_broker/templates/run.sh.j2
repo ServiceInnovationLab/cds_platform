@@ -1,0 +1,9 @@
+#!/bin/bash
+
+JAVA_OPTS="-Dswarm.http.port=8100 -Dswarm.io.tmpdir=/opt/samlbroker/tmp"
+JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=/opt/samlbroker/truststore.jks -Djavax.net.ssl.trustStorePassword={{ truststore_pwd }}"
+
+# Uncomment for debug
+# JAVA_OPTS="$JAVA_OPTS -agentlib:jdwp=transport=dt_socket,server=y,address=8101,suspend=n"
+
+/usr/bin/java $JAVA_OPTS -jar /opt/samlbroker/saml-broker-swarm.jar -P /opt/samlbroker/samlbroker.properties

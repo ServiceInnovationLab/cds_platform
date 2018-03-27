@@ -1,0 +1,21 @@
+# Restart app if property values change
+
+swarm.bind.address={{ hostvars[inventory_hostname].ansible_host }}
+swarm.undertow.servers.default-server.http-listeners.default.proxy-address-forwarding=true
+swarm.context.path=cds
+swarm.ds.username={{ db_user }}
+swarm.ds.password={{ db_password }}
+swarm.ds.connection.url=jdbc:postgresql://{{ db_host }}:5432/{{ db_name }}
+
+# Uncomment the following to enable undertow's request dumping
+#swarm.undertow.filter-configuration.custom-filters.request-dumper.class-name=io.undertow.server.handlers.RequestDumpingHandler
+#swarm.undertow.filter-configuration.custom-filters.request-dumper.module=io.undertow.core
+#swarm.undertow.servers.default-server.hosts.default-host.filter-refs.request-dumper
+
+realme.rcms.base_path=https://{{ test_host }}/fakeme/api/rcms/v1
+realme.rcms.api_key=fake-api-key
+
+openam.base_path={{ openam_site_url }}
+openam.cookie_name={{ openam_cookie_name }}
+oauth2.client_id={{ cds.oauth2.client_id }}
+oauth2.client_secret={{ cds.oauth2.client_secret }}

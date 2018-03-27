@@ -1,0 +1,51 @@
+---
+env: vagrant
+use_letsencrypt: no
+
+db_name: cds_vagrant
+db_user: cds_vagrant
+db_password: Password12.
+
+java_home: /usr/lib/jvm/jre-1.8.0
+
+tomcat_keystore_pwd: password
+openam_admin_pwd: password
+openam_policy_agent_pwd: password12
+openam_keystore_pwd: password
+
+www_host: www.vagrant.delegations.org.nz
+sso_host: sso.vagrant.delegations.org.nz
+am_host: app1.vagrant.delegations.org.nz
+test_host: test.vagrant.delegations.org.nz
+db_host: dat1.vagrant.delegations.org.nz
+cds_host: app2.vagrant.delegations.org.nz
+
+openam_server_url: http://{{ am_host }}:8080
+openam_site_url: https://{{ sso_host }}/sso
+
+cookie_prefix: VAGRANT_
+cookie_domain: .vagrant.delegations.org.nz
+
+openam_cookie_name: VAGRANT_SSO
+
+cds_sp_entity_id: https://vagrant.delegations.org.nz/sso/delegations-poc
+demo_sp_entity_id: https://vagrant.delegations.org.nz/sso/app1
+realme_idp_entity_id: https://www.vagrant.logon.realme.govt.nz/saml2
+
+cds:
+  oauth2:
+    client_id: delegation-oauth-agent
+    client_secret: password
+
+saml_broker:
+  signing_alias: signing
+  mutual_ssl_alias: vagrant.sa.mutual.ssl.vagrant.delegations.org.nz
+  keystore_password: password
+  truststore_pwd: changeit
+
+test_harness:
+  client_id: access123
+  client_secret: secret456
+
+mail:
+  relay_host: jos-smtp-server.datacom.co.nz

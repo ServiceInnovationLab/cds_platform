@@ -1,0 +1,52 @@
+---
+- hosts: localhost
+  tasks:
+    - name: SOURCES directory
+      file:
+        path: SOURCES
+        state: directory
+
+- hosts: all
+  become: yes
+  tasks:
+    - name: Add IP addresses to hosts file
+      lineinfile:
+        dest: /etc/hosts
+        line: "{{ hostvars[item].ansible_host }} {{ hostvars[item].inventory_hostname }} {{ hostvars[item].inventory_hostname_short }}"
+        state: present
+      with_items: "{{ groups.all }}"
+
+
+    - name: Add EPEL repository
+      yum_repository:
+        name: epel
+        description: EPEL YUM repo
+        baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+        gpgcheck: no
+
+- hosts: actual
+  become: yes
+  tasks:
+    - name: Remove Oracle Java
+      yum:
+        name: jdk1.8.0_65
+        state: absent
+
+    - name: Install useful packages
+      yum:
+        name: "{{ item }}"
+        state: latest
+      with_items:
+        - java-1.8.0-openjdk
+        - unzip
+        - zip
+        - vim
+        - bash-completion
+        - tcpdump
+        - wget
+        - telnet
+        - libselinux-python
+        - libsemanage-python
+
+    - name: Set timezone
+      shell: timedatectl set-timezone Pacific/Auckland

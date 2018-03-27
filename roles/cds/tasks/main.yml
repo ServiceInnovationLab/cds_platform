@@ -1,0 +1,40 @@
+---
+- name: CDS working directory
+  file:
+    path: /opt/cds/tmp
+    state: directory
+
+- name: CDS service definition
+  copy:
+    src: cds.service
+    dest: /etc/systemd/system/cds.service
+    mode: u=rw,g=rw,o=r
+
+- name: CDS run script
+  template:
+    src: run.sh.j2
+    dest: /opt/cds/run.sh
+    mode: u=rwx,g=,o=
+
+- name: CDS properties
+  template:
+    src: cds.properties.j2
+    dest: /opt/cds/cds.properties
+    mode: u=r,g=,o=
+
+- name: CDS truststore
+  copy:
+    src: files/truststore.jks
+    dest: /opt/cds/truststore.jks
+
+- name: CDS binary
+  copy:
+    src: SOURCES/cds-swarm.jar
+    dest: /opt/cds
+
+- name: CDS systemd service enabled
+  systemd:
+    name: cds
+    daemon_reload: yes
+    enabled: yes
+    state: started

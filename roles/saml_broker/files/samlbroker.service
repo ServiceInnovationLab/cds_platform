@@ -1,0 +1,11 @@
+[Unit]
+Description=Saml Broker
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/samlbroker
+ExecStart=/opt/samlbroker/run.sh
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,40 @@
+---
+- name: Test harness working directory
+  file:
+    path: /opt/testharness/tmp
+    state: directory
+
+- name: Test harness service properties
+  template:
+    src: testharness.properties.j2
+    dest: /opt/testharness/testharness.properties
+    mode: u=r,g=,o=
+
+- name: Test harness run script
+  template:
+    src: run.sh.j2
+    dest: /opt/testharness/run.sh
+    mode: u=rwx,g=,o=
+
+- name: Test harness service definition
+  copy:
+    src: testharness.service
+    dest: /etc/systemd/system/testharness.service
+    mode: u=rw,g=rw,o=r
+
+- name: Test harness truststore
+  copy:
+    src: files/truststore.jks
+    dest: /opt/testharness/truststore.jks
+
+- name: Test harness binary
+  copy:
+    src: SOURCES/test-harness-swarm.jar
+    dest: /opt/testharness
+
+- name: Test harness service enabled
+  systemd:
+    name: testharness
+    daemon_reload: yes
+    enabled: yes
+    state: restarted

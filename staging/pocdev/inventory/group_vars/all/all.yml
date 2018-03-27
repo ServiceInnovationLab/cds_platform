@@ -1,0 +1,50 @@
+---
+env: pocdev
+use_letsencrypt: yes
+
+db_name: "{{ vault_db_name }}"
+db_user: "{{ vault_db_user }}"
+db_password: "{{ vault_db_password }}"
+
+java_home: /usr/lib/jvm/jre-1.8.0
+
+tomcat_keystore_pwd: "{{ vault_tomcat_keystore_pwd }}"
+openam_admin_pwd: "{{ vault_openam_admin_pwd }}"
+openam_policy_agent_pwd: "{{ vault_openam_policy_agent_pwd }}"
+openam_keystore_pwd: "{{ vault_openam_keystore_pwd }}"
+
+www_host: www.pocdev.delegation.org.nz
+sso_host: sso.pocdev.delegation.org.nz
+am_host: app1.pocdev.delegation.org.nz
+test_host: test.pocdev.delegation.org.nz
+db_host: dat1.pocdev.delegation.org.nz
+cds_host: app2.pocdev.delegation.org.nz
+
+openam_server_url: http://{{ am_host }}:8080
+openam_site_url: https://{{ sso_host }}/sso
+
+cookie_prefix: POCDEV_
+cookie_domain: .pocdev.delegation.org.nz
+
+openam_cookie_name: "{{ cookie_prefix }}SSO"
+
+cds_sp_entity_id: https://poc.delegations.org.nz/sso/delegations-pocdev
+demo_sp_entity_id: https://poc.delegations.org.nz/sso/delegations-pocdev2
+realme_idp_entity_id: https://www.logon.fakeme.govt.nz/saml2
+
+cds:
+  oauth2:
+    client_id: "{{ vault_cds_oauth2_client_id }}"
+    client_secret: "{{ vault_cds_oauth2_client_secret }}"
+
+saml_broker:
+  signing_alias: signing
+  mutual_ssl_alias: ite.sa.mutual.ssl.poc.delegations.org.nz
+  keystore_password: "{{ vault_saml_broker_keystore_password }}"
+
+test_harness:
+  client_id: "{{ vault_test_harness_client_id }}"
+  client_secret: "{{ vault_test_harness_client_secret }}"
+
+mail:
+  relay_host: tools.delegation.org.nz

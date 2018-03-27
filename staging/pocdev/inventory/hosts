@@ -1,0 +1,41 @@
+[all:vars]
+ansible_connection=ssh
+ansible_user=centos
+ansible_ssh_private_key_file=~/.ssh/dia_delegation.pem
+
+[db-server]
+dat1.pocdev.delegation.org.nz ansible_host=172.31.27.17
+
+[app]
+app2.pocdev.delegation.org.nz ansible_host=172.31.31.204
+
+[app-web]
+www.pocdev.delegation.org.nz ansible_host=172.31.23.171
+
+[test]
+test.pocdev.delegation.org.nz ansible_host=172.31.28.76
+
+[test-web:children]
+test
+
+[am]
+app1.pocdev.delegation.org.nz ansible_host=172.31.27.77
+
+[am-web]
+sso.pocdev.delegation.org.nz ansible_host=172.31.23.75
+
+[web-server:children]
+am-web
+app-web
+test-web
+
+[mail-server:children]
+app
+
+# some things shouldn't be run multiple times if it's multiple hosts/ip addresses on one machine
+[actual]
+app1.pocdev.delegation.org.nz
+app2.pocdev.delegation.org.nz
+dat1.pocdev.delegation.org.nz
+test.pocdev.delegation.org.nz
+www.pocdev.delegation.org.nz

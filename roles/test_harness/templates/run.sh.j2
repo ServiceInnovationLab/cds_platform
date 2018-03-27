@@ -1,0 +1,9 @@
+#!/bin/bash
+
+JAVA_OPTS="-Dswarm.http.port=8080 -Dswarm.io.tmpdir=/opt/testharness/tmp"
+JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=/opt/testharness/truststore.jks -Djavax.net.ssl.trustStorePassword={{ truststore_pwd }}"
+
+# Uncomment for debug
+# JAVA_OPTS="$JAVA_OPTS -agentlib:jdwp=transport=dt_socket,server=y,address=8081,suspend=n"
+
+/usr/bin/java $JAVA_OPTS -jar /opt/testharness/test-harness-swarm.jar -P /opt/testharness/testharness.properties

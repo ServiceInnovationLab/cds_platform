@@ -1,0 +1,38 @@
+[all:vars]
+ansible_connection=ssh
+ansible_ssh_user=vagrant
+ansible_ssh_pass=vagrant
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+[db-server]
+dat1.vagrant.delegations.org.nz ansible_host=10.128.100.4 ansible_connection=local
+
+[app]
+app2.vagrant.delegations.org.nz ansible_host=10.128.100.5 ansible_connection=local
+
+[app-web]
+www.vagrant.delegations.org.nz ansible_host=10.128.100.3 ansible_connection=local
+
+[test]
+test.vagrant.delegations.org.nz ansible_host=10.128.100.6 ansible_connection=local
+
+[test-web:children]
+test
+
+[am]
+app1.vagrant.delegations.org.nz ansible_host=10.128.100.2 ansible_connection=local
+
+[am-web]
+sso.vagrant.delegations.org.nz ansible_host=10.128.100.7 ansible_connection=local
+
+[web-server:children]
+am-web
+app-web
+test-web
+
+[mail-server:children]
+app
+
+# some things shouldn't be run multiple times if it's multiple hosts/ip addresses on one machine
+[actual:children]
+app

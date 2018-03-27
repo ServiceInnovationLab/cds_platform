@@ -1,0 +1,5 @@
+---
+- hosts: app-web
+  become: yes
+  roles:
+    - static_html

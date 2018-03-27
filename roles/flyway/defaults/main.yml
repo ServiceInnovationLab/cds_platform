@@ -1,0 +1,4 @@
+---
+flyway_version: 4.2.0
+flyway_archive_name: flyway-commandline-{{ flyway_version }}-linux-x64.tar.gz
+flyway_dl_url: https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/{{ flyway_version }}/{{ flyway_archive_name }}

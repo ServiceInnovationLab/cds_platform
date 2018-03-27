@@ -1,0 +1,50 @@
+---
+- name: SAML Broker working directory
+  file:
+    path: /opt/samlbroker/tmp
+    state: directory
+
+- name: SAML Broker service properties
+  template:
+    src: samlbroker.properties.j2
+    dest: /opt/samlbroker/samlbroker.properties
+    mode: u=r,g=,o=
+
+- name: SAML Broker service definition
+  copy:
+    src: samlbroker.service
+    dest: /etc/systemd/system/samlbroker.service
+    mode: u=rw,g=rw,o=r
+
+- name: SAML Broker keystore
+  copy:
+    src: staging/{{ env }}/files/saml-broker-keystore.jks
+    dest: /opt/samlbroker/keystore.jks
+
+- name: SAML Broker truststore
+  copy:
+    src: files/truststore.jks
+    dest: /opt/samlbroker/truststore.jks
+
+- name: SAML Broker IdP metadata
+  copy:
+    src: staging/{{ env }}/files/saml/realme-idp-metadata.xml
+    dest: /opt/samlbroker/idp-metadata.xml
+
+- name: SAML Broker run script
+  template:
+    src: run.sh.j2
+    dest: /opt/samlbroker/run.sh
+    mode: u=rwx,g=,o=
+
+- name: SAML Broker binary
+  copy:
+    src: SOURCES/saml-broker-swarm.jar
+    dest: /opt/samlbroker
+
+- name: SAML Broker service enabled
+  systemd:
+    name: samlbroker
+    daemon_reload: yes
+    enabled: yes
+    state: restarted

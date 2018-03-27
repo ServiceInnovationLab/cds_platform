@@ -1,0 +1,5 @@
+---
+truststore_pwd: changeit
+swagger_ui:
+  loc: https://github.com/swagger-api/swagger-ui/archive/master.zip
+  name: swagger-ui-master

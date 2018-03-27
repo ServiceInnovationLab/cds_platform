@@ -1,0 +1,33 @@
+---
+- name: Tomcat installed
+  yum:
+    name: tomcat
+    state: latest
+
+- name: Tomcat server.xml
+  template:
+    src: server.xml.j2
+    dest: /etc/tomcat/server.xml
+    group: tomcat
+    mode: u=rw,g=r,o=r
+
+- name: Tomcat sysconfig
+  template:
+    src: tomcat-sysconfig.j2
+    dest: /etc/sysconfig/tomcat
+    mode: u=rw,g=r,o=r
+
+- name: Tomcat keystore directory
+  file:
+    path: /opt/misc
+    state: directory
+
+- name: Tomcat keystore
+  copy:
+    src: staging/{{ env }}/files/tomcat-keystore.jks
+    dest: /opt/misc/tomcat-keystore.jks
+
+- name: Tomcat truststore
+  copy:
+    src: files/truststore.jks
+    dest: /opt/misc/truststore.jks

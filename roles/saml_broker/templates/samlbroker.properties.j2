@@ -1,0 +1,14 @@
+swarm.bind.address={{ hostvars[inventory_hostname].ansible_host }}
+swarm.undertow.servers.default-server.http-listeners.default.proxy-address-forwarding=true
+swarm.context.path=saml-broker
+
+# Uncomment the following to enable undertow's request dumping
+#swarm.undertow.filter-configuration.custom-filters.request-dumper.class-name=io.undertow.server.handlers.RequestDumpingHandler
+#swarm.undertow.filter-configuration.custom-filters.request-dumper.module=io.undertow.core
+#swarm.undertow.servers.default-server.hosts.default-host.filter-refs.request-dumper
+
+sp.entity_id={{ demo_sp_entity_id }}
+sp.acs_location=https://{{ test_host }}/saml-broker/acs
+sp.signing_alias={{ saml_broker.signing_alias }}
+sp.mutual_ssl_alias={{ saml_broker.mutual_ssl_alias }}
+keystore.password={{ saml_broker.keystore_password }}

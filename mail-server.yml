@@ -1,0 +1,13 @@
+---
+- hosts: mail-server
+  become: yes
+  tasks:
+    - name: Configure postfix
+      template:
+        src: templates/postfix/main.cf.j2
+        dest: /etc/postfix/main.cf
+
+    - name: Restart postfix
+      service:
+        name: postfix
+        state: restarted

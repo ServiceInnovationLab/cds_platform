@@ -1,0 +1,8 @@
+---
+- include: base-setup.yml
+- include: mail-server.yml
+# TODO: Uncomment the openam playbook once you have a valid url to download the required openam dependences. See project documentation for more details.
+# - include: openam.yml
+- include: app.yml
+- include: test-server.yml
+- include: links-page.yml

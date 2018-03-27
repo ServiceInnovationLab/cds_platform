@@ -1,0 +1,15 @@
+swarm.bind.address={{ hostvars[inventory_hostname].ansible_host }}
+swarm.http.port=8080
+swarm.undertow.servers.default-server.http-listeners.default.proxy-address-forwarding=true
+swarm.context.path=test-harness
+
+# Uncomment the following to enable undertow's request dumping
+#swarm.undertow.filter-configuration.custom-filters.request-dumper.class-name=io.undertow.server.handlers.RequestDumpingHandler
+#swarm.undertow.filter-configuration.custom-filters.request-dumper.module=io.undertow.core
+#swarm.undertow.servers.default-server.hosts.default-host.filter-refs.request-dumper
+
+cds.api.endpoint=https://{{ www_host }}/cds/api
+cds.api.client_id={{ test_harness.client_id }}
+cds.api.client_secret={{ test_harness.client_secret }}
+app1.entityid={{ demo_sp_entity_id }}
+realme.endpoint.rcmsissue=https://{{ test_host }}/fakeme/api/rcms/v1/issue

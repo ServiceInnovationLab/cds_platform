@@ -1,0 +1,17 @@
+---
+- name: Download Flyway cli
+  get_url:
+    url: "{{ flyway_dl_url }}"
+    dest: SOURCES/{{ flyway_archive_name }}
+  delegate_to: localhost
+  become: no
+
+- name: Extract Flyway cli
+  unarchive:
+    src: SOURCES/{{ flyway_archive_name }}
+    dest: /opt
+
+- name: Configure Flyway cli
+  template:
+    src: flyway.conf.j2
+    dest: /opt/flyway-{{ flyway_version }}/conf/flyway.conf

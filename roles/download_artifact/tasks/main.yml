@@ -1,0 +1,29 @@
+---
+- debug: msg="Checking and fetching {{ artifact_name }}"
+# TODO: This role will need to be updated to download the application binaries from an artifact repository.
+#       The commented logic was using Jenkins as an artifact repository, so was:
+#         1. checking if the artifact exists in SOURCES directory,
+#         2. checking the fingerprint of the artifact in Jenkins
+#         3. installing artifact from jenkins if artifact didn't exist in SOURCES or if the fingerprint didn't match
+#
+# # place required artifacts inside the SOURCES directory
+# - name: Local checksum
+#   stat:
+#     path: SOURCES/{{ artifact_name }}
+#   register: local_stat
+#
+# # use finger print to check if a newer version of the artifact is required
+# - name: Remote checksum
+#   uri:
+#     url: "{{ jenkins_url }}/job/{{ job_name }}/lastSuccessfulBuild/artifact/target/{{ artifact_name }}/*fingerprint*/"
+#     return_content: yes
+#   register: remote_fingerprint
+#
+# # Replace this url with one that will be used to download the artifacts.
+# # Example of a url is: http://tools.delegation/releases/stable/{{ artifact_name}}
+# - name: Jenkins binary
+#   get_url:
+#     url: "{{ jenkins_url }}/job/{{ job_name }}/lastSuccessfulBuild/artifact/target/{{ artifact_name }}"
+#     dest: SOURCES/{{ artifact_name }}
+#     force: yes
+#   when: (not local_stat.stat.exists) or (not remote_fingerprint.content | search(local_stat.stat.md5))

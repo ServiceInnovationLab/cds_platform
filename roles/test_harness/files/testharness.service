@@ -1,0 +1,11 @@
+[Unit]
+Description=Test Harness
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/testharness
+ExecStart=/opt/testharness/run.sh
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

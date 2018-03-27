@@ -1,0 +1,11 @@
+[Unit]
+Description=Central Delegation Service
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/cds
+ExecStart=/opt/cds/run.sh
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

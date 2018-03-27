@@ -1,0 +1,11 @@
+---
+tools_home: /opt/openamTools/ssoadm
+debug_dir: /opt/openam/openam/debug
+log_dir: /opt/openam/openam/log
+config_dir: /opt/openam
+am_version: OpenAM 14.0.0
+
+configurator_version: 14.1.0
+
+openam_version: 5.1.0
+amster_version: 5.0.0
